@@ -12,13 +12,30 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 // MongoDB Connection
-if (process.env.MONGO_URI) {
+/*if (process.env.MONGO_URI) {
   mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('✅ MongoDB Connected Successfully'))
     .catch((err) => console.error('❌ MongoDB Error:', err));
 } else {
   console.error('❌ MONGO_URI is missing in Environment Variables!');
-}
+}*/
+// --- Serverless MongoDB Connection Middleware ---
+const connectDB = async () => {
+  if (mongoose.connection.readyState >= 1) return; // ஏற்கனவே இணைந்திருந்தால் மீண்டும் இணைக்காது
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 5000 // 5 வினாடியில் இணைக்க முடியவில்லை என்றால் எரர் காட்டும்
+    });
+    console.log('✅ MongoDB Connected Successfully');
+  } catch (err) {
+    console.error('❌ MongoDB Connection Error:', err);
+  }
+};
+
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
 
 // Cloudinary Config
 cloudinary.config({
